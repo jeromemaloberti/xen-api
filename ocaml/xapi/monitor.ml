@@ -243,11 +243,14 @@ let update_bond dev stat =
 
 let update_netdev doms =
 	let stats = Network_monitor.read_stats () in
-	List.fold_left (fun (dss, pifs) (dev, stat) ->
+	let bonds_list = ref [] in
+	let res = List.fold_left (fun (dss, pifs) (dev, stat) ->
 		if not (String.startswith "vif" dev) then
 		begin
-			if stat.nb_links > 1 then (* it is a bond *)
-        update_bond dev stat;
+			if stat.nb_links > 1 then begin (* it is a bond *)
+				update_bond dev stat;
+				bonds_list := dev :: !bonds_list
+			end;
 			let pif_name = "pif_" ^ dev in
 			let pif = {
 				pif_name = dev;
@@ -298,7 +301,12 @@ let update_netdev doms =
 				dss
 			with _ -> dss),
 			pifs
-	) ([], []) stats
+	) ([], []) stats in
+	if (List.length !bonds_list) <> (Hashtbl.length bonds_status) then begin
+		let dead_bonds = Hashtbl.fold (fun k _ acc -> if List.mem k !bonds_list then acc else k :: acc) bonds_status [] in
+		List.iter (fun b -> debug "Removing bond %s" b; Hashtbl.remove bonds_status b) dead_bonds
+	end;
+	res
 
 (*****************************************************)
 (* disk related code                                 *)
