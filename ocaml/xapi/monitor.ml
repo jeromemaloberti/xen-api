@@ -211,40 +211,43 @@ let vif_device_of_string x =
 let string_of_vif_device x =
 	Printf.sprintf "%s%d.%d" (if x.pv then "vif" else "tap") x.domid x.devid
 
-let update_netdev doms =
+let update_bond dev stat =
 	let alert dev interfaces message =
 		let ifaces = String.concat "+" (List.sort String.compare interfaces) in
 		let mesg = Printf.sprintf "The status of the %s bond %s" ifaces message in
 		Xapi_alert.add ~name:Api_messages.bond_status_changed ~priority:1L ~cls:`Host
 			~obj_uuid:(Helpers.get_localhost_uuid ()) ~body:mesg in
+	if Hashtbl.mem bonds_status dev then
+		begin
+			let (nb_links_old, links_up_old) = Hashtbl.find bonds_status dev in
+			if links_up_old <> stat.links_up then
+				begin
+					info "Bonds status changed: %s nb_links %d up %d up_old %d" dev stat.nb_links
+						stat.links_up links_up_old;
+					let msg = Printf.sprintf "changed: %d/%d up (was %d/%d)" stat.links_up stat.nb_links
+						links_up_old nb_links_old in
+					alert dev stat.interfaces msg;
+					Hashtbl.replace bonds_status dev (stat.nb_links,stat.links_up);
+					add_bond_status dev stat.links_up
+				end
+		end
+	else (* first time that we see the bond *)
+		begin
+			info "New bonds status : %s nb_links %d up %d" dev stat.nb_links stat.links_up;
+			if stat.links_up <> stat.nb_links then
+				let msg = Printf.sprintf "is: %d/%d up" stat.links_up stat.nb_links in
+				alert dev stat.interfaces msg;
+				Hashtbl.add bonds_status dev (stat.nb_links,stat.links_up);
+				add_bond_status dev stat.links_up
+		end
+
+let update_netdev doms =
 	let stats = Network_monitor.read_stats () in
 	List.fold_left (fun (dss, pifs) (dev, stat) ->
 		if not (String.startswith "vif" dev) then
 		begin
 			if stat.nb_links > 1 then (* it is a bond *)
-			if Hashtbl.mem bonds_status dev then
-				begin
-					let (nb_links_old, links_up_old) = Hashtbl.find bonds_status dev in 
-					if links_up_old <> stat.links_up then
-					begin
-						info "Bonds status changed: %s nb_links %d up %d up_old %d" dev stat.nb_links
-							stat.links_up links_up_old;
-						let msg = Printf.sprintf "changed: %d/%d up (was %d/%d)" stat.links_up stat.nb_links
-							links_up_old nb_links_old in
-						alert dev stat.interfaces msg;
-						Hashtbl.replace bonds_status dev (stat.nb_links,stat.links_up);
-						add_bond_status dev stat.links_up
-					end
-				end
-			else (* first time that we see the bond *)
-				begin
-					info "New bonds status : %s nb_links %d up %d" dev stat.nb_links stat.links_up;
-					if stat.links_up <> stat.nb_links then
-						let msg = Printf.sprintf "is: %d/%d up" stat.links_up stat.nb_links in
-						alert dev stat.interfaces msg;
-					Hashtbl.add bonds_status dev (stat.nb_links,stat.links_up);
-					add_bond_status dev stat.links_up
-				end;
+        update_bond dev stat;
 			let pif_name = "pif_" ^ dev in
 			let pif = {
 				pif_name = dev;
