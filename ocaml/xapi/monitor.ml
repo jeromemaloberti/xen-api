@@ -546,11 +546,15 @@ let read_all_dom0_stats __context =
 
   
 let do_monitor __context xc =
-  Stats.time_this "monitor"
-    (fun () ->
-      let (stats,uuids,pifs,timestamp,my_rebooting_vms,my_paused_vms) = read_all_dom0_stats __context in
-      Monitor_self.go __context;
-      Monitor_rrds.update_rrds ~__context timestamp stats uuids pifs my_rebooting_vms my_paused_vms)
+	Stats.time_this "monitor"
+		(fun () ->
+			let (stats,uuids,pifs,timestamp,my_rebooting_vms,my_paused_vms) = read_all_dom0_stats __context in
+			Monitor_self.go __context;
+			Monitor_rrds.update_rrds ~__context timestamp stats uuids pifs my_rebooting_vms my_paused_vms;
+			if((List.length !bonds_status_update) > 0) then
+				Mutex.execute Rrd_shared.mutex
+					(fun () -> Condition.broadcast Rrd_shared.condition))
+
     
 let _loop __context xc =
   while true
