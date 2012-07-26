@@ -568,7 +568,9 @@ let change_host_free_memory ?fistpoints io required_mem_kib success_condition =
   done
 
 let free_memory fistpoints io required_mem_kib =
-  change_host_free_memory ?fistpoints io (required_mem_kib +* io.target_host_free_mem_kib) (fun x -> x >= (required_mem_kib +* io.target_host_free_mem_kib))
+	try
+		change_host_free_memory ?fistpoints io (required_mem_kib +* io.target_host_free_mem_kib) (fun x -> x >= (required_mem_kib +* io.target_host_free_mem_kib))
+	with e -> debug "free memory caught: %s" (Printexc.to_string e)
 
 let free_memory_range ?fistpoints io min_kib max_kib =
   (* First compute the 'ideal' amount of free memory based on the proportional allocation policy *)
@@ -589,7 +591,9 @@ let free_memory_range ?fistpoints io min_kib max_kib =
     else min_kib in
   debug "free_memory_range ideal target = %Ld" target;
 
-  change_host_free_memory ?fistpoints io (target +* io.target_host_free_mem_kib) (fun x -> x >= (min_kib +* io.target_host_free_mem_kib));
+	(try
+		change_host_free_memory ?fistpoints io (target +* io.target_host_free_mem_kib) (fun x -> x >= (min_kib +* io.target_host_free_mem_kib))
+	with e -> debug "free memory range caught: %s" (Printexc.to_string e));
   let host = snd(io.make_host ()) in
   let usable_free_mem_kib = host.free_mem_kib -* io.target_host_free_mem_kib in
   if usable_free_mem_kib < min_kib then begin
