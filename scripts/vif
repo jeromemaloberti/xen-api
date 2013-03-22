@@ -165,7 +165,7 @@ add_to_bridge()
         fi
 	local vlan=
 	local vlan_tag=$(xenstore-read "${PRIVATE}/vlan" 2>/dev/null)
-	if [ $? -ne "-1"] ; then
+	if [ $? -ne "-1" ] ; then
 	    vlan="tag=${vlan_tag}"
 	fi
 
