@@ -687,7 +687,10 @@ let rec plug ~__context ~self =
 	end;
 	if Db.PIF.get_bond_slave_of ~__context ~self <> Ref.null then
 		raise (Api_errors.Server_error (Api_errors.cannot_plug_bond_slave, [Ref.string_of self]));
-	Nm.bring_pif_up ~__context ~management_interface:false self
+	if not(Db.is_valid_ref __context (Db.PIF.get_VLAN_master_of ~__context ~self)) then
+		Nm.bring_pif_up ~__context ~management_interface:false self
+	else
+		info "PIF %s is a VLAN -> not plugging" (Ref.string_of self)
 
 let calculate_pifs_required_at_start_of_day ~__context =
 	let localhost = Helpers.get_localhost ~__context in

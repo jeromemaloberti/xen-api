@@ -60,7 +60,8 @@ let create ~__context ~tagged_PIF ~tag ~network =
 		raise (Api_errors.Server_error (Api_errors.is_tunnel_access_pif, [Ref.string_of tagged_PIF]));
 
 	let vlan, untagged_PIF = create_internal ~__context ~host ~tagged_PIF ~tag ~network ~device in
-	Xapi_pif.plug ~__context ~self:untagged_PIF;
+	(* No more necessary
+	Xapi_pif.plug ~__context ~self:untagged_PIF; *)
 	vlan
 
 let destroy ~__context ~self =
