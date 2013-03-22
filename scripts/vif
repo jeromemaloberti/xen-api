@@ -163,8 +163,13 @@ add_to_bridge()
         if [ "$TYPE" = "vif" ] ; then
             local vif_details=$(handle_vswitch_vif_details $bridge)
         fi
+	local vlan=
+	local vlan_tag=$(xenstore-read "${PRIVATE}/vlan" 2>/dev/null)
+	if [ $? -ne "-1"] ; then
+	    vlan="tag=${vlan_tag}"
+	fi
 
-        $vsctl --timeout=30 -- --if-exists del-port $dev -- add-port $bridge $dev $vif_details
+        $vsctl --timeout=30 -- --if-exists del-port $dev -- add-port $bridge $dev $vlan $vif_details
         ;;
     esac
         
