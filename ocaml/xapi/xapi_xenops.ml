@@ -402,12 +402,17 @@ module MD = struct
 				(* If we don't need to reflect anything, the carrier is set to "true" *)
 				true
 		in
-		let vlan = match pifs with
-		  | [] -> -1L
+		let (vlan,net') = match pifs with
+		  | [] -> (-1L,net)
 		  | pif :: _ ->
 		    try
-		      Db.PIF.get_VLAN ~__context ~self:pif
-		    with _ -> -1L
+		      let vlan_tag = Db.PIF.get_VLAN ~__context ~self:pif in
+		      let vlan = Db.PIF.get_VLAN_master_of ~__context ~self:pif in
+		      let vlan_pif = Db.VLAN.get_tagged_PIF ~__context ~self:vlan in
+		      let net = Db.PIF.get_network ~__context ~self:vlan_pif in
+		      let net_rec = Db.Network.get_record ~__context ~self:net in
+		      (vlan_tag,net_rec)
+		    with _ -> (-1L,net)
 		in
 		info "VLAN %Ld" vlan;
 		let open Vif in {
@@ -417,7 +422,7 @@ module MD = struct
 			carrier = carrier;
 			mtu = mtu;
 			rate = rate;
-			backend = backend_of_network net;
+			backend = backend_of_network net';
 			other_config = vif.API.vIF_other_config;
 			locking_mode = locking_mode;
 			extra_private_keys = [
