@@ -386,11 +386,11 @@ module MD = struct
 			| `locked, _ -> Vif.Locked { Vif.ipv4 = vif.API.vIF_ipv4_allowed; ipv6 = vif.API.vIF_ipv6_allowed }
 			| `unlocked, _ -> Vif.Unlocked
 			| `disabled, _ -> Vif.Disabled in
+		let host = Helpers.get_localhost ~__context in
+		let pifs = Xapi_network_attach_helpers.get_local_pifs ~__context ~network:vif.API.vIF_network ~host in
 		let carrier =
 			if !pass_through_pif_carrier then
 				(* We need to reflect the carrier of the local PIF on the network (if any) *)
-				let host = Helpers.get_localhost ~__context in
-				let pifs = Xapi_network_attach_helpers.get_local_pifs ~__context ~network:vif.API.vIF_network ~host in
 				match pifs with
 				| [] -> true (* Internal network; consider as "always up" *)
 				| pif :: _ ->
@@ -402,6 +402,14 @@ module MD = struct
 				(* If we don't need to reflect anything, the carrier is set to "true" *)
 				true
 		in
+		let vlan = match pifs with
+		  | [] -> -1L
+		  | pif :: _ ->
+		    try
+		      Db.PIF.get_VLAN ~__context ~self:pif
+		    with _ -> -1L
+		in
+		info "VLAN %Ld" vlan;
 		let open Vif in {
 			id = (vm.API.vM_uuid, vif.API.vIF_device);
 			position = int_of_string vif.API.vIF_device;
@@ -413,8 +421,9 @@ module MD = struct
 			other_config = vif.API.vIF_other_config;
 			locking_mode = locking_mode;
 			extra_private_keys = [
-                "vif-uuid", vif.API.vIF_uuid;
-				"network-uuid", net.API.network_uuid
+				"vif-uuid", vif.API.vIF_uuid;
+				"network-uuid", net.API.network_uuid;
+				"vlan", (Int64.to_string vlan)
 			]
 		}
 
