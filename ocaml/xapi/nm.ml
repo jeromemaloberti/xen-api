@@ -364,6 +364,9 @@ let determine_static_routes net_rc =
 		[]
 
 let bring_pif_up ~__context ?(management_interface=false) (pif: API.ref_PIF) =
+	if (Db.is_valid_ref __context (Db.PIF.get_VLAN_master_of ~__context ~self:pif)) then
+		info "PIF %s is a VLAN -> not plugging" (Ref.string_of pif)
+	else
 	with_local_lock (fun () ->
 		let dbg = Context.string_of_task __context in
 		let rc = Db.PIF.get_record ~__context ~self:pif in
