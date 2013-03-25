@@ -85,13 +85,15 @@ let destroy ~__context ~self =
 		let network = Db.PIF.get_network ~__context ~self:untagged_PIF in
 		let bridge = Db.Network.get_bridge ~__context ~self:network in
 
-		Xapi_pif.unplug ~__context ~self:untagged_PIF;
+		(* No more necessary
+		Xapi_pif.unplug ~__context ~self:untagged_PIF; *)
 
 		Xapi_network.detach ~__context bridge;
 
 		(try
 			let vlan = Db.PIF.get_VLAN_master_of ~__context ~self:untagged_PIF in
 			Db.VLAN.destroy ~__context ~self:vlan with _ -> ());
-		Db.PIF.destroy ~__context ~self:untagged_PIF
+		(* No more necessary
+		Db.PIF.destroy ~__context ~self:untagged_PIF *)
 	end
 

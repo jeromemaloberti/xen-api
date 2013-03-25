@@ -510,6 +510,9 @@ let bring_pif_up ~__context ?(management_interface=false) (pif: API.ref_PIF) =
 	)
 
 let bring_pif_down ~__context ?(force=false) (pif: API.ref_PIF) =
+	if (Db.is_valid_ref __context (Db.PIF.get_VLAN_master_of ~__context ~self:pif)) then
+		info "PIF %s is a VLAN -> not unplugging" (Ref.string_of pif)
+	else
 	with_local_lock (fun () ->
 		Network.transform_networkd_exn pif (fun () ->
 			let dbg = Context.string_of_task __context in
