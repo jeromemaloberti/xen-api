@@ -93,7 +93,6 @@ let destroy ~__context ~self =
 		(try
 			let vlan = Db.PIF.get_VLAN_master_of ~__context ~self:untagged_PIF in
 			Db.VLAN.destroy ~__context ~self:vlan with _ -> ());
-		(* No more necessary
-		Db.PIF.destroy ~__context ~self:untagged_PIF *)
+		Db.PIF.destroy ~__context ~self:untagged_PIF
 	end
 
